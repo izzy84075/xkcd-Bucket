@@ -36,10 +36,9 @@ use DBI;
 $Data::Dumper::Indent = 1;
 
 # try to load Math::BigFloat if possible
-my $math = "";
-eval { require Math::BigFloat; };
-unless ($@) {
-    $math = "Math::BigFloat";
+my $math = eval "use Math::BigFloat; 1" ? "Math::BigFloat" : "";
+if( $math eq "Math::BigFloat") {
+    require Math::BigFloat;
     &Log("$math loaded");
 }
 
@@ -1591,7 +1590,7 @@ sub db_success {
                 return;
             }
 
-            if ( $exp !~ /\*\*/ and $math ) {
+            if ( $exp !~ /\*\*/ and  $math ) {
                 my $newexp;
                 foreach my $word ( split /( |-[\d_e.]+|\*\*|[+\/%()*])/, $exp )
                 {
@@ -1605,14 +1604,25 @@ sub db_success {
             eval $exp;
             Log "-> $res";
             if ( defined $res ) {
-                if ( length $res < 400 ) {
-                    &say( $bag{chl} => "$bag{who}: $res" );
-                } else {
-                    $res->accuracy(400);
-                    &say(   $bag{chl} => "$bag{who}: "
-                          . $res->mantissa() . "e"
-                          . $res->exponent() );
-                }
+		if (eval "$res->length()" ) {
+	                if ($res->length() < 250 ) {
+        	            &say( $bag{chl} => "$bag{who}: $res" );
+                	} else {
+	                    $res->accuracy(250);
+        	            &say(   $bag{chl} => "$bag{who}: "
+                	          . $res->mantissa() . "e"
+                        	  . $res->exponent() );
+	                }
+		} else {
+			if (length $res < 250 ) {
+				&say( $bag{chl} => "$bag{who}: $res" );
+			} else {
+				$res->accuracy(250);
+				&say(  $bag{chl} => "$bag{who}: "
+				    .  $res->mantissa() . "e"
+				    .  $res->exponent() );
+			}
+		}
             } elsif ($@) {
                 $@ =~ s/ at \(.*//;
                 &say( $bag{chl} => "Sorry, $bag{who}, there was an error: $@" );
